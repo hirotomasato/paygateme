@@ -1,0 +1,18 @@
+
+# Binaries
+paygateme-tui
+paygateme-login
+tui
+
+# Sensitive session files (contain cookies/tokens)
+*.session.json
+session.json
+
+# QR images (personal)
+myqr.png
+
+# Go
+*.exe
+*.test
+*.out
+vendor/
