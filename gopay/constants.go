@@ -1,5 +1,8 @@
 package gopay
 
+// ProviderID is the stable identifier for GoPay provider.
+const ProviderID = "gopay"
+
 // Base URLs and endpoint paths derived from the GoBiz merchant dashboard
 // network flow. Required for the private API to accept requests.
 const (

@@ -18,8 +18,9 @@ import (
 )
 
 func main() {
-	savePath := flag.String("save", "", "path to persist the session JSON (sensitive; gitignore it)")
-	restorePath := flag.String("restore", "", "path to a saved session JSON; skips login when readable")
+	savePath := flag.String("save", "", "path to persist the session (sensitive; gitignore it)")
+	restorePath := flag.String("restore", "", "path to a saved session; skips login when readable")
+	passphrase := flag.String("passphrase", "", "optional passphrase to encrypt/decrypt session file at rest")
 	deviceReport := flag.String("device", shopee.DeviceRiskBlob, "device-risk blob")
 	amount := flag.Int64("amount", 0, "create a payment with this base amount after login (0 = skip)")
 	staticQris := flag.String("qris", "", "static QRIS payload to bind after login (empty = skip)")
@@ -36,9 +37,17 @@ func main() {
 			fmt.Fprintf(os.Stderr, "restore: %v\n", err)
 			os.Exit(1)
 		}
+		if *passphrase != "" {
+			decrypted, err := utils.Decrypt(data, *passphrase)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "restore: decrypt session failed: %v\n", err)
+				os.Exit(1)
+			}
+			data = decrypted
+		}
 		var s shopee.Session
 		if err := json.Unmarshal(data, &s); err != nil {
-			fmt.Fprintf(os.Stderr, "restore: unreadable session JSON: %v\n", err)
+			fmt.Fprintf(os.Stderr, "restore: unreadable session JSON: %v (if encrypted, pass -passphrase)\n", err)
 			os.Exit(1)
 		}
 		restored = &s
@@ -55,6 +64,13 @@ func main() {
 			data, err := json.MarshalIndent(s, "", "  ")
 			if err != nil {
 				return err
+			}
+			if *passphrase != "" {
+				encrypted, err := utils.Encrypt(data, *passphrase)
+				if err != nil {
+					return fmt.Errorf("encrypt session: %w", err)
+				}
+				data = encrypted
 			}
 			return os.WriteFile(*savePath, data, 0o600)
 		},

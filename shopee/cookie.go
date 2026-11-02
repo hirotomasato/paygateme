@@ -118,13 +118,21 @@ func (j *CookieJar) normalizeCookie(c *http.Cookie, requestURL *url.URL) *http.C
 	nc := new(http.Cookie)
 	*nc = *c
 
+	reqHost := strings.ToLower(requestURL.Hostname())
+
 	// Default domain to the request host (hostname, no port).
 	if nc.Domain == "" {
-		nc.Domain = requestURL.Hostname()
+		nc.Domain = reqHost
 	} else {
 		// Go's http.Cookie keeps a leading dot on the Domain attribute; strip it
 		// so matching is consistent (mirrors the TS jar).
 		nc.Domain = strings.TrimPrefix(strings.ToLower(nc.Domain), ".")
+
+		// RFC6265 5.3 Rule 5: Ensure request host matches or is a subdomain of the cookie domain.
+		// A request to "partner.shopee.co.id" cannot set Domain="evil.com" or Domain="other.co.id".
+		if reqHost != nc.Domain && !strings.HasSuffix(reqHost, "."+nc.Domain) {
+			return nil
+		}
 	}
 	// Default path.
 	if nc.Path == "" {

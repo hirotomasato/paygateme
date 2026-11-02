@@ -38,18 +38,19 @@ func MatchesPayment(payment core.Payment, tx core.MerchantTransaction, clockSkew
 		return false
 	}
 
-	// Only settle on success-like statuses so pending/failed transactions that
-	// carry the same amount never settle a payment. Unknown/empty statuses are
-	// treated as success (fail-open).
+	// Strictly enforce settled statuses (fail-closed).
+	// Empty, unmapped, pending, or failed statuses are rejected so unconfirmed
+	// transactions can never settle a payment.
 	status := strings.ToLower(strings.TrimSpace(tx.Status))
-	if status != "" && !settledStatuses[status] {
+	if !settledStatuses[status] {
 		return false
 	}
 
-	// A zero transaction time means the adapter could not parse it; fall back
-	// to amount + status only.
+	// Strictly verify transaction timing (fail-closed).
+	// A zero transaction time means the adapter could not parse it or was omitted;
+	// refusing to settle without a trusted timestamp within the payment window.
 	if tx.Time.IsZero() {
-		return true
+		return false
 	}
 
 	windowStart := payment.CreatedAt.Add(-clockSkew)

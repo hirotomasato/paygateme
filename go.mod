@@ -1,6 +1,6 @@
 module github.com/hirotomasato/paygateme
 
-go 1.26.2
+go 1.24.0
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
@@ -32,4 +32,4 @@ require (
 	golang.org/x/text v0.3.8 // indirect
 )
 
-replace github.com/hirotomasato/paygateme => /home/masanto/tool/paygateme
+

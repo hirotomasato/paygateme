@@ -152,7 +152,7 @@ func (h *HTTPClient) JSON(ctx context.Context, req Request, v any) error {
 		return err
 	}
 	if resp.StatusCode >= 400 {
-		return core.NewHTTPError(resp.StatusCode, "Shopee HTTP error", string(raw))
+		return core.NewHTTPError(resp.StatusCode, "Shopee HTTP error", utils.SanitizeHTTPBody(raw, 1024))
 	}
 
 	if len(raw) == 0 {

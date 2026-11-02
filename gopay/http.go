@@ -89,13 +89,13 @@ func (c *HTTPClient) RequestJSON(ctx context.Context, req HTTPRequest, v any) er
 			raw2, _ := io.ReadAll(resp2.Body)
 			if resp2.StatusCode >= 400 {
 				return core.NewHTTPError(resp2.StatusCode,
-					fmt.Sprintf("GoPay HTTP error (retry) %d", resp2.StatusCode), string(raw2))
+					fmt.Sprintf("GoPay HTTP error (retry) %d", resp2.StatusCode), utils.SanitizeHTTPBody(raw2, 1024))
 			}
 			raw = raw2
 			goto decode
 		}
 		return core.NewHTTPError(resp.StatusCode,
-			fmt.Sprintf("GoPay HTTP error %d", resp.StatusCode), string(raw))
+			fmt.Sprintf("GoPay HTTP error %d", resp.StatusCode), utils.SanitizeHTTPBody(raw, 1024))
 	}
 
 decode:
@@ -121,7 +121,16 @@ type HTTPRequest struct {
 
 // Do sends a request and returns the raw response.
 func (c *HTTPClient) Do(ctx context.Context, req HTTPRequest) (*http.Response, error) {
-	u, err := url.Parse(c.baseURL + req.Path)
+	var rawURL string
+	if strings.HasPrefix(req.Path, "http://") || strings.HasPrefix(req.Path, "https://") {
+		rawURL = req.Path
+	} else if (c.baseURL == "" || c.baseURL == GoBizAPIBaseURL || c.baseURL == GojekAPIBaseURL) &&
+		(strings.HasPrefix(req.Path, "/goid/") || strings.HasPrefix(req.Path, "/merchant-analytics/")) {
+		rawURL = GojekAPIBaseURL + req.Path
+	} else {
+		rawURL = c.baseURL + req.Path
+	}
+	u, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +173,12 @@ func (c *HTTPClient) Do(ctx context.Context, req HTTPRequest) (*http.Response, e
 	// Baseline headers + defaults.
 	for k, v := range c.headers {
 		httpReq.Header.Set(k, v)
+	}
+	if c.tokenManager != nil && (req.Headers == nil || req.Headers["Authorization"] == "") {
+		token := c.tokenManager.AccessToken()
+		if token != "" {
+			httpReq.Header.Set("Authorization", "Bearer "+token)
+		}
 	}
 	for k, v := range req.Headers {
 		httpReq.Header.Set(k, v)

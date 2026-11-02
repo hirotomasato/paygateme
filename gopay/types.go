@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hirotomasato/paygateme/core"
+	"github.com/hirotomasato/paygateme/utils"
 )
 
 // ---- Auth ----
@@ -30,6 +31,12 @@ type SessionState struct {
 	DeviceID string `json:"deviceId,omitempty"`
 	// When the session was last refreshed (epoch ms), for debugging.
 	LastRefreshedAt int64 `json:"lastRefreshedAt,omitempty"`
+	// Resolved merchant context.
+	Merchant *StoredMerchant `json:"merchant,omitempty"`
+	// Selected outlet / point of payment.
+	OutletID string `json:"outletId,omitempty"`
+	// Bound static QRIS payload.
+	StaticQRIS string `json:"staticQris,omitempty"`
 }
 
 // LoginRequestResult is the result of requesting an OTP.
@@ -151,6 +158,10 @@ type ProviderConfig struct {
 	RefreshBeforeExpiryMs int64
 	// Callback invoked after automatic token refresh for persistence.
 	OnTokenRefreshed func(session SessionState) error
+	// Callback invoked whenever session state changes (login, switch, refresh).
+	OnSessionUpdated func(session SessionState) error
 	// Maximum unique-amount offset for dynamic QRIS amount encoding.
 	MaxUniqueOffset int
+	// Optional leveled logger. Defaults to noop.
+	Logger utils.Logger
 }

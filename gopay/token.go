@@ -71,6 +71,20 @@ func (m *TokenManager) AccessToken() string {
 	return m.tokens.AccessToken
 }
 
+// Tokens returns a copy of the current token set.
+func (m *TokenManager) Tokens() TokenSet {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.tokens
+}
+
+// IsExpired reports whether the access token has expired.
+func (m *TokenManager) IsExpired() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return time.Now().After(m.expiresAt)
+}
+
 // GetValidAccessToken returns a valid access token, refreshing if needed.
 func (m *TokenManager) GetValidAccessToken(ctx context.Context) (string, error) {
 	if !m.needsRefresh() {
