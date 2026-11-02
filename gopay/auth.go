@@ -28,6 +28,9 @@ func NewAuthClient(http *HTTPClient, clientID string) *AuthClient {
 
 // RequestOTP sends an OTP challenge for a phone number.
 func (a *AuthClient) RequestOTP(ctx context.Context, phoneNumber, countryCode string) (*LoginRequestResult, error) {
+	if countryCode == "" {
+		countryCode = "62"
+	}
 	body := map[string]any{
 		"client_id":    a.clientID,
 		"phone_number": normalizePhone(phoneNumber),

@@ -24,6 +24,9 @@ func NewTransactionFeed(http *HTTPClient) *TransactionFeed {
 // ListRecent implements core.TransactionFeed.
 func (f *TransactionFeed) ListRecent(ctx context.Context, query core.TransactionFeedQuery) (core.TransactionFeedResult, error) {
 	merchantID := query.Scope.MerchantID
+	if merchantID == "" {
+		merchantID = query.Scope.AccountID
+	}
 	statuses := PaidTransactionStatuses
 	paymentTypes := DefaultPaymentTypes
 
