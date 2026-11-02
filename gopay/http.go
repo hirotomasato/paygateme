@@ -89,13 +89,13 @@ func (c *HTTPClient) RequestJSON(ctx context.Context, req HTTPRequest, v any) er
 			raw2, _ := io.ReadAll(resp2.Body)
 			if resp2.StatusCode >= 400 {
 				return core.NewHTTPError(resp2.StatusCode,
-					fmt.Sprintf("GoPay HTTP error (retry) %d", resp2.StatusCode), string(raw2))
+					fmt.Sprintf("GoPay HTTP error (retry) %d", resp2.StatusCode), utils.SanitizeHTTPBody(raw2, 1024))
 			}
 			raw = raw2
 			goto decode
 		}
 		return core.NewHTTPError(resp.StatusCode,
-			fmt.Sprintf("GoPay HTTP error %d", resp.StatusCode), string(raw))
+			fmt.Sprintf("GoPay HTTP error %d", resp.StatusCode), utils.SanitizeHTTPBody(raw, 1024))
 	}
 
 decode:

@@ -17,8 +17,9 @@ import (
 )
 
 func main() {
-	savePath := flag.String("save", "", "path to persist session JSON (sensitive; gitignore it)")
-	restorePath := flag.String("restore", "", "path to saved session JSON; skips login when readable")
+	savePath := flag.String("save", "", "path to persist session (sensitive; gitignore it)")
+	restorePath := flag.String("restore", "", "path to saved session; skips login when readable")
+	passphrase := flag.String("passphrase", "", "optional passphrase to encrypt/decrypt session file at rest")
 	amount := flag.Int64("amount", 0, "create a payment with this base amount after login (0 = skip)")
 	staticQRIS := flag.String("qris", "", "static QRIS payload to bind after login (empty = use outlet QRIS)")
 	flag.Parse()
@@ -32,9 +33,17 @@ func main() {
 			fmt.Fprintf(os.Stderr, "restore: %v\n", err)
 			os.Exit(1)
 		}
+		if *passphrase != "" {
+			decrypted, err := utils.Decrypt(data, *passphrase)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "restore: decrypt session failed: %v\n", err)
+				os.Exit(1)
+			}
+			data = decrypted
+		}
 		var s gopay.SessionState
 		if err := json.Unmarshal(data, &s); err != nil {
-			fmt.Fprintf(os.Stderr, "restore: unreadable session JSON: %v\n", err)
+			fmt.Fprintf(os.Stderr, "restore: unreadable session JSON: %v (if encrypted, pass -passphrase)\n", err)
 			os.Exit(1)
 		}
 		restored = &s
@@ -51,6 +60,13 @@ func main() {
 			data, err := json.MarshalIndent(s, "", "  ")
 			if err != nil {
 				return err
+			}
+			if *passphrase != "" {
+				encrypted, err := utils.Encrypt(data, *passphrase)
+				if err != nil {
+					return fmt.Errorf("encrypt session: %w", err)
+				}
+				data = encrypted
 			}
 			return os.WriteFile(*savePath, data, 0o600)
 		},
@@ -147,6 +163,11 @@ func main() {
 	if *savePath != "" {
 		sess := provider.ExportSession()
 		data, _ := json.MarshalIndent(sess, "", "  ")
+		if *passphrase != "" {
+			if encrypted, err := utils.Encrypt(data, *passphrase); err == nil {
+				data = encrypted
+			}
+		}
 		_ = os.WriteFile(*savePath, data, 0o600)
 		fmt.Printf("Session saved to %s\n", *savePath)
 	}

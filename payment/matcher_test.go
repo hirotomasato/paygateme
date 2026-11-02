@@ -47,17 +47,17 @@ func TestMatchesPaymentStatusFailClosed(t *testing.T) {
 	}
 }
 
-func TestMatchesPaymentFailOpenEmptyStatus(t *testing.T) {
+func TestMatchesPaymentFailClosedEmptyStatus(t *testing.T) {
 	now := time.Now()
 	p := mkPayment(10001, now, now.Add(5*time.Minute))
 
-	// Empty status is treated as success (fail-open).
-	if !MatchesPayment(p, mkTx("a", 10001, "", now.Add(time.Minute)), time.Minute) {
-		t.Fatal("empty status must match (fail-open)")
+	// Empty status must be rejected (fail-closed).
+	if MatchesPayment(p, mkTx("a", 10001, "", now.Add(time.Minute)), time.Minute) {
+		t.Fatal("empty status must not match (fail-closed)")
 	}
-	// Whitespace-only also counts as empty.
-	if !MatchesPayment(p, mkTx("b", 10001, "  ", now.Add(time.Minute)), time.Minute) {
-		t.Fatal("whitespace status must match (fail-open)")
+	// Whitespace-only must be rejected.
+	if MatchesPayment(p, mkTx("b", 10001, "  ", now.Add(time.Minute)), time.Minute) {
+		t.Fatal("whitespace status must not match (fail-closed)")
 	}
 }
 
@@ -79,12 +79,12 @@ func TestMatchesPaymentTimingWindow(t *testing.T) {
 	}
 }
 
-func TestMatchesPaymentUnparseableTimeFallsBack(t *testing.T) {
+func TestMatchesPaymentRejectsUnparseableTime(t *testing.T) {
 	now := time.Now()
 	p := mkPayment(10001, now, now.Add(5*time.Minute))
-	// Zero time = unparseable; falls back to amount + status only.
-	if !MatchesPayment(p, mkTx("a", 10001, "settlement", time.Time{}), time.Minute) {
-		t.Fatal("unparseable time must fall back to amount+status")
+	// Zero time = unparseable; fail-closed: must NOT match.
+	if MatchesPayment(p, mkTx("a", 10001, "settlement", time.Time{}), time.Minute) {
+		t.Fatal("unparseable time must be rejected (fail-closed)")
 	}
 }
 

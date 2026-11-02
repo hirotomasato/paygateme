@@ -67,3 +67,31 @@ func TestCookieJarSnapshotRestore(t *testing.T) {
 		t.Fatalf("restored cookie lost value: %q", got)
 	}
 }
+
+func TestCookieJarRejectsUnauthorizedDomain(t *testing.T) {
+	jar := NewCookieJar()
+	u, _ := url.Parse("https://partner.shopee.co.id/")
+
+	// Setting a domain that is not a suffix of the request host must be rejected.
+	jar.SetCookies(u, []*http.Cookie{
+		{
+			Name:   "EVIL",
+			Value:  "injected",
+			Domain: "evil.com",
+			Path:   "/",
+		},
+		{
+			Name:   "UNRELATED",
+			Value:  "unrelated",
+			Domain: "tokopedia.com",
+			Path:   "/",
+		},
+	})
+
+	if got := jar.Get("EVIL", "https://partner.shopee.co.id/"); got != "" {
+		t.Fatalf("jar accepted unauthorized domain cookie: %q", got)
+	}
+	if got := jar.Get("UNRELATED", "https://partner.shopee.co.id/"); got != "" {
+		t.Fatalf("jar accepted unrelated domain cookie: %q", got)
+	}
+}
